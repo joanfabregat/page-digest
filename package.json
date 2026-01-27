@@ -10,9 +10,9 @@
   "devDependencies": {
     "archiver": "^7.0.1",
     "crx": "^5.0.1",
-    "esbuild": "^0.20.0"
+    "esbuild": "^0.25.12"
   },
   "dependencies": {
-    "@mozilla/readability": "^0.5.0"
+    "@mozilla/readability": "^0.6.0"
   }
 }
