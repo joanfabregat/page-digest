@@ -1,0 +1,29 @@
+Summarize any article or webpage with one click using ChatGPT.
+
+Page Digest extracts the main content from any webpage and sends it to ChatGPT's Summarizer GPT for instant summarization.
+
+✨ FEATURES
+• One-click summarization of any article
+• Smart content extraction using Mozilla's Readability
+• Works on news sites, blogs, documentation, and more
+• Automatically opens ChatGPT with your content ready
+
+📖 HOW IT WORKS
+1. Navigate to any article or webpage
+2. Click the Page Digest icon
+3. Click "Summarize this page"
+4. ChatGPT opens with the article content and generates a summary
+
+🔒 PRIVACY FOCUSED
+• No data collection or tracking
+• No accounts required
+• All processing happens locally
+• Content is only sent to ChatGPT when you click summarize
+
+📋 REQUIREMENTS
+• A ChatGPT account (free or Plus)
+
+Perfect for researchers, students, professionals, or anyone who wants to quickly understand long articles without reading every word.
+
+---
+Open source: https://github.com/joanfabregat/page-digest
