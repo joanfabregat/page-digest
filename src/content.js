@@ -28,5 +28,5 @@ function extractArticle() {
   }
 }
 
-// Execute and return result
-extractArticle();
+// Execute and store result globally for popup.js to retrieve
+window.__pageDigestResult__ = extractArticle();

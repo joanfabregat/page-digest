@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "Extract article content and send to ChatGPT Summarizer",
   "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://chatgpt.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
