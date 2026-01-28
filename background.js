@@ -2,6 +2,59 @@ const MAX_CHARS = 25000;
 
 const SYSTEM_PROMPT = `Summarize this article concisely. Keep the same language as the source. Use bullet points for key takeaways. Be brief but don't miss critical information.`;
 
+// Check if a URL is accessible by the extension
+function isAccessibleUrl(url) {
+  if (!url) return false;
+  return !url.startsWith('chrome://') &&
+         !url.startsWith('chrome-extension://') &&
+         !url.startsWith('about:') &&
+         !url.startsWith('edge://') &&
+         !url.startsWith('brave://') &&
+         !url.startsWith('opera://') &&
+         !url.startsWith('vivaldi://');
+}
+
+// Update extension icon state based on tab accessibility
+async function updateIconState(tabId, url) {
+  if (isAccessibleUrl(url)) {
+    await chrome.action.enable(tabId);
+    await chrome.action.setTitle({
+      tabId,
+      title: 'Summarize this page'
+    });
+  } else {
+    await chrome.action.disable(tabId);
+    await chrome.action.setTitle({
+      tabId,
+      title: 'Cannot access this page type'
+    });
+  }
+}
+
+// Listen for tab updates to enable/disable icon
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.url || changeInfo.status === 'complete') {
+    updateIconState(tabId, tab.url);
+  }
+});
+
+// Listen for tab activation to update icon state
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    updateIconState(activeInfo.tabId, tab.url);
+  } catch (e) {
+    // Tab might not exist anymore
+  }
+});
+
+// Initialize icon state for all existing tabs on extension load
+chrome.tabs.query({}).then(tabs => {
+  for (const tab of tabs) {
+    updateIconState(tab.id, tab.url);
+  }
+});
+
 const LLM_CONFIGS = {
   chatgpt: {
     url: 'https://chatgpt.com/',
@@ -45,7 +98,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   console.log('[PageDigest] Extension clicked on tab:', tab.id, tab.url);
 
   // Check if we can access this tab
-  if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
+  if (!isAccessibleUrl(tab.url)) {
     console.error('[PageDigest] Cannot access this page type:', tab.url);
     return;
   }
