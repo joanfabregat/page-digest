@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Digest Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Page Digest Settings</h1>
+
+    <div class="setting">
+      <label>AI Provider</label>
+      <div class="radio-group">
+        <label class="radio-option">
+          <input type="radio" name="provider" value="chatgpt">
+          <span class="radio-label">
+            <span class="provider-name">ChatGPT</span>
+            <span class="provider-desc">OpenAI's ChatGPT</span>
+          </span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="provider" value="gemini">
+          <span class="radio-label">
+            <span class="provider-name">Gemini</span>
+            <span class="provider-desc">Google's Gemini</span>
+          </span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="provider" value="claude">
+          <span class="radio-label">
+            <span class="provider-name">Claude</span>
+            <span class="provider-desc">Anthropic's Claude</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,109 +1,278 @@
-const CHATGPT_SUMMARIZER_URL = 'https://chatgpt.com/g/g-6JOD1U2Xp-summarizer';
+const MAX_CHARS = 25000;
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'summarize') {
-    handleSummarize(message.article);
-    sendResponse({ started: true });
+const SYSTEM_PROMPT = `Summarize this article concisely. Keep the same language as the source. Use bullet points for key takeaways. Be brief but don't miss critical information.`;
+
+const LLM_CONFIGS = {
+  chatgpt: {
+    url: 'https://chatgpt.com/',
+    inputSelector: '#prompt-textarea, div[contenteditable="true"][data-placeholder], div.ProseMirror[contenteditable="true"]',
+    submitSelectors: [
+      'button[data-testid="send-button"]',
+      'button[aria-label="Send prompt"]',
+      'button[aria-label="Send message"]',
+      'form button[type="submit"]'
+    ],
+    injectMethod: 'chatgpt'
+  },
+  gemini: {
+    url: 'https://gemini.google.com/app',
+    inputSelector: '.ql-editor[contenteditable="true"], div[contenteditable="true"][aria-label*="prompt"], rich-textarea .ql-editor, div[contenteditable="true"].ql-editor',
+    submitSelectors: [
+      'button[aria-label="Send message"]',
+      'button.send-button',
+      'button[data-test-id="send-button"]',
+      'button[mattooltip="Send message"]'
+    ],
+    injectMethod: 'contenteditable'
+  },
+  claude: {
+    url: 'https://claude.ai/new',
+    inputSelector: 'div[contenteditable="true"].ProseMirror, div[contenteditable="true"][data-placeholder], div.ProseMirror',
+    submitSelectors: [
+      'button[aria-label="Send Message"]',
+      'button[aria-label="Send message"]',
+      'button[type="button"]:has(svg)',
+      'fieldset button',
+      'form button[type="submit"]',
+      'div[data-testid="composer"] button'
+    ],
+    injectMethod: 'prosemirror'
   }
-  return true;
+};
+
+// Listen for extension icon click
+chrome.action.onClicked.addListener(async (tab) => {
+  console.log('[PageDigest] Extension clicked on tab:', tab.id, tab.url);
+
+  // Check if we can access this tab
+  if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
+    console.error('[PageDigest] Cannot access this page type:', tab.url);
+    return;
+  }
+
+  try {
+    // Extract content from the current page
+    const article = await extractContent(tab.id);
+
+    if (!article || !article.content) {
+      console.error('[PageDigest] Could not extract content from page');
+      return;
+    }
+
+    // Check content quality and ask for confirmation if poor
+    if (article.quality === 'poor') {
+      const confirmed = await showConfirmDialog(tab.id, article.qualityReason);
+      if (!confirmed) {
+        console.log('[PageDigest] User cancelled due to poor content quality');
+        return;
+      }
+    }
+
+    // Get the configured provider
+    const { provider = 'chatgpt' } = await chrome.storage.sync.get(['provider']);
+    console.log('[PageDigest] Using provider:', provider);
+
+    // Prepare content
+    let content = article.content;
+    if (content.length > MAX_CHARS) {
+      content = content.substring(0, MAX_CHARS);
+    }
+
+    // Send to LLM
+    await handleSummarize(provider, {
+      title: article.title,
+      url: article.url,
+      content: content
+    });
+
+  } catch (error) {
+    console.error('[PageDigest] Error:', error.message);
+  }
 });
 
-async function handleSummarize(article) {
-  console.log('[PageDigest] Background: Starting summarize flow');
+async function showConfirmDialog(tabId, reason) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (reasonText) => {
+      return confirm(
+        `Page Digest: Limited content detected\n\n` +
+        `Reason: ${reasonText}\n\n` +
+        `The summary quality may be affected. Continue anyway?`
+      );
+    },
+    args: [reason]
+  });
 
-  // Open ChatGPT tab
-  const chatGPTTab = await chrome.tabs.create({ url: CHATGPT_SUMMARIZER_URL });
-  console.log('[PageDigest] Background: Opened ChatGPT tab:', chatGPTTab.id);
+  return results[0]?.result === true;
+}
 
-  // Wait for page to load and inject text
-  const textToSend = `Please summarize this article:\n\nTitle: ${article.title}\nURL: ${article.url}\n\n${article.content}`;
+async function extractContent(tabId) {
+  // Execute the bundle which stores result in window.__pageDigestResult__
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['dist/content.bundle.js']
+  });
 
-  // Poll until the page is ready
+  // Retrieve the result
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => window.__pageDigestResult__
+  });
+
+  return results[0]?.result;
+}
+
+async function handleSummarize(provider, article) {
+  const config = LLM_CONFIGS[provider];
+  if (!config) {
+    console.error('[PageDigest] Unknown provider:', provider);
+    return;
+  }
+
+  console.log('[PageDigest] Starting summarize flow with', provider);
+
+  // Open LLM tab
+  const llmTab = await chrome.tabs.create({ url: config.url });
+  console.log('[PageDigest] Opened', provider, 'tab:', llmTab.id);
+
+  // Prepare the text with system prompt
+  const textToSend = `${SYSTEM_PROMPT}
+
+---
+Title: ${article.title}
+Source: ${article.url}
+---
+
+${article.content}`;
+
+  // Poll until the page is ready and inject text
   let attempts = 0;
-  const maxAttempts = 20;
+  const maxAttempts = 30;
   let injected = false;
 
   while (attempts < maxAttempts && !injected) {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     try {
-      console.log('[PageDigest] Background: Injection attempt', attempts + 1);
-      const result = await injectIntoChatGPT(chatGPTTab.id, textToSend);
-      console.log('[PageDigest] Background: Injection result:', result);
+      console.log('[PageDigest] Injection attempt', attempts + 1);
+      const result = await injectIntoLLM(llmTab.id, textToSend, config);
+      console.log('[PageDigest] Injection result:', result);
       if (result?.success) {
         injected = true;
       }
     } catch (e) {
-      console.log('[PageDigest] Background: Injection attempt failed:', e.message);
+      console.log('[PageDigest] Injection attempt failed:', e.message);
     }
 
     attempts++;
   }
 
   if (injected) {
-    console.log('[PageDigest] Background: Injection successful, clicking submit');
-    await clickSubmitButton(chatGPTTab.id);
+    console.log('[PageDigest] Injection successful, clicking submit');
+    // Wait a bit for the editor to settle
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await clickSubmitButton(llmTab.id, config.submitSelectors);
   } else {
-    console.error('[PageDigest] Background: Failed to inject after', maxAttempts, 'attempts');
+    console.error('[PageDigest] Failed to inject after', maxAttempts, 'attempts');
   }
 }
 
-async function injectIntoChatGPT(tabId, text) {
+async function injectIntoLLM(tabId, text, config) {
   const results = await chrome.scripting.executeScript({
     target: { tabId },
-    func: (textToInject) => {
-      const editor = document.querySelector('#prompt-textarea');
+    func: (textToInject, inputSelector, injectMethod) => {
+      // Try each selector
+      const selectors = inputSelector.split(', ');
+      let editor = null;
 
-      if (!editor) {
-        return { success: false, error: 'Could not find ChatGPT input field' };
+      for (const selector of selectors) {
+        editor = document.querySelector(selector.trim());
+        if (editor) break;
       }
 
-      // ProseMirror editors need direct content manipulation
+      if (!editor) {
+        return { success: false, error: 'Could not find input field' };
+      }
+
       editor.focus();
 
-      // Clear existing content and set new text
-      const p = document.createElement('p');
-      p.textContent = textToInject;
-      editor.innerHTML = '';
-      editor.appendChild(p);
+      if (injectMethod === 'chatgpt') {
+        // ChatGPT uses ProseMirror
+        const p = document.createElement('p');
+        p.textContent = textToInject;
+        editor.innerHTML = '';
+        editor.appendChild(p);
+        editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: textToInject }));
+      } else if (injectMethod === 'prosemirror') {
+        // ProseMirror editors (Claude)
+        const p = document.createElement('p');
+        p.textContent = textToInject;
+        editor.innerHTML = '';
+        editor.appendChild(p);
 
-      // Trigger input event to notify ProseMirror of the change
-      editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+        // Dispatch multiple events to ensure the editor picks up the change
+        editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Focus at the end
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else if (injectMethod === 'contenteditable') {
+        // Contenteditable divs (Gemini)
+        editor.innerHTML = '';
+        const p = document.createElement('p');
+        p.textContent = textToInject;
+        editor.appendChild(p);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.dispatchEvent(new Event('change', { bubbles: true }));
+      }
 
       return { success: true };
     },
-    args: [text]
+    args: [text, config.inputSelector, config.injectMethod]
   });
 
   return results[0]?.result;
 }
 
-async function clickSubmitButton(tabId) {
-  for (let attempt = 0; attempt < 5; attempt++) {
+async function clickSubmitButton(tabId, selectors) {
+  for (let attempt = 0; attempt < 15; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const results = await chrome.scripting.executeScript({
       target: { tabId },
-      func: () => {
-        const selectors = [
-          'button[data-testid="send-button"]',
-          'button[aria-label="Send prompt"]',
-          'form button[type="submit"]'
-        ];
+      func: (submitSelectors) => {
+        for (const selector of submitSelectors) {
+          try {
+            const buttons = document.querySelectorAll(selector);
+            for (const button of buttons) {
+              // Check if button is visible and not disabled
+              const style = window.getComputedStyle(button);
+              const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && button.offsetParent !== null;
 
-        for (const selector of selectors) {
-          const button = document.querySelector(selector);
-          if (button && !button.disabled) {
-            button.click();
-            return { success: true };
+              if (isVisible && !button.disabled) {
+                button.click();
+                return { success: true, selector };
+              }
+            }
+          } catch (e) {
+            // Selector might be invalid, continue
           }
         }
-
         return { success: false, error: 'Button not ready' };
-      }
+      },
+      args: [selectors]
     });
 
     if (results[0]?.result?.success) {
+      console.log('[PageDigest] Clicked submit with selector:', results[0].result.selector);
       return results[0].result;
     }
   }

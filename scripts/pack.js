@@ -5,7 +5,7 @@ const ChromeExtension = require('crx');
 const os = require('os');
 
 const ROOT = path.join(__dirname, '..');
-const DIST_FILES = ['manifest.json', 'popup', 'dist', 'icons'];
+const DIST_FILES = ['manifest.json', 'background.js', 'options', 'dist', 'icons'];
 
 function copyRecursiveSync(src, dest) {
   const stat = fs.statSync(src);

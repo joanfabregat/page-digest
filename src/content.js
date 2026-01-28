@@ -6,27 +6,50 @@ function extractArticle() {
     const reader = new Readability(documentClone);
     const article = reader.parse();
 
+    const fallbackContent = document.body.innerText;
+    const usedFallback = !article || !article.textContent;
+    const content = usedFallback ? fallbackContent : article.textContent;
+
+    // Determine quality
+    let quality = 'good';
+    let qualityReason = null;
+
+    if (usedFallback) {
+      quality = 'poor';
+      qualityReason = 'Could not extract article structure';
+    } else if (content.length < 500) {
+      quality = 'poor';
+      qualityReason = 'Very little content found';
+    } else if (content.length < 1000) {
+      quality = 'medium';
+      qualityReason = 'Limited content extracted';
+    }
+
     return {
       success: true,
       title: article?.title || document.title,
-      content: article?.textContent || document.body.innerText,
+      content: content,
       url: window.location.href,
       byline: article?.byline || null,
-      length: article?.length || document.body.innerText.length
+      length: content.length,
+      quality: quality,
+      qualityReason: qualityReason
     };
   } catch (error) {
-    // Fallback if Readability fails
+    // Fallback if Readability fails completely
+    const content = document.body.innerText;
     return {
       success: true,
       title: document.title,
-      content: document.body.innerText,
+      content: content,
       url: window.location.href,
       byline: null,
-      length: document.body.innerText.length,
-      fallback: true
+      length: content.length,
+      quality: 'poor',
+      qualityReason: 'Extraction failed, using raw page text'
     };
   }
 }
 
-// Execute and store result globally for popup.js to retrieve
+// Execute and store result globally
 window.__pageDigestResult__ = extractArticle();

@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "archiver": "^7.0.1",
+    "canvas": "^3.2.1",
     "crx": "^5.0.1",
     "esbuild": "^0.25.12"
   },

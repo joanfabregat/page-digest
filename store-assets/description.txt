@@ -1,27 +1,33 @@
-Summarize any article or webpage with one click using ChatGPT.
+Summarize any article or webpage with one click using ChatGPT, Gemini, or Claude.
 
-Page Digest extracts the main content from any webpage and sends it to ChatGPT's Summarizer GPT for instant summarization.
+Page Digest extracts the main content from any webpage and sends it to your preferred AI assistant for instant summarization.
 
-✨ FEATURES
-• One-click summarization of any article
-• Smart content extraction using Mozilla's Readability
-• Works on news sites, blogs, documentation, and more
-• Automatically opens ChatGPT with your content ready
+FEATURES
+- One-click summarization - just click the icon, no popup needed
+- Multiple AI providers: ChatGPT, Gemini, or Claude
+- Smart content extraction using Mozilla's Readability
+- Works on news sites, blogs, documentation, and more
+- Automatically submits content to your chosen AI
 
-📖 HOW IT WORKS
+HOW IT WORKS
 1. Navigate to any article or webpage
 2. Click the Page Digest icon
-3. Click "Summarize this page"
-4. ChatGPT opens with the article content and generates a summary
+3. Your AI assistant opens with the article and generates a summary
 
-🔒 PRIVACY FOCUSED
-• No data collection or tracking
-• No accounts required
-• All processing happens locally
-• Content is only sent to ChatGPT when you click summarize
+CONFIGURATION
+Right-click the extension icon and select "Options" to choose your preferred AI:
+- ChatGPT (OpenAI)
+- Gemini (Google)
+- Claude (Anthropic)
 
-📋 REQUIREMENTS
-• A ChatGPT account (free or Plus)
+PRIVACY FOCUSED
+- No data collection or tracking
+- No accounts required (beyond your AI provider account)
+- All processing happens locally
+- Content is only sent to your chosen AI when you click the icon
+
+REQUIREMENTS
+- An account with your chosen AI provider (ChatGPT, Gemini, or Claude)
 
 Perfect for researchers, students, professionals, or anyone who wants to quickly understand long articles without reading every word.
 

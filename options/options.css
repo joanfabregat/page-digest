@@ -1,0 +1,101 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  background: #fff;
+  min-width: 320px;
+}
+
+.container {
+  padding: 20px;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #1a1a1a;
+}
+
+.setting {
+  margin-bottom: 20px;
+}
+
+.setting > label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  border-color: #10a37f;
+  background: #f8fffe;
+}
+
+.radio-option:has(input:checked) {
+  border-color: #10a37f;
+  background: #e8f5f1;
+}
+
+.radio-option input {
+  margin-right: 12px;
+  accent-color: #10a37f;
+  width: 18px;
+  height: 18px;
+}
+
+.radio-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.provider-name {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.provider-desc {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.status {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.hidden {
+  display: none;
+}
