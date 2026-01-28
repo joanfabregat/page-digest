@@ -9,7 +9,9 @@ function extractTextFromHtml(html) {
   const blockTags = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'TR', 'BR', 'BLOCKQUOTE', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'TD', 'TH'];
 
   function addSpacing(element) {
-    for (const child of element.childNodes) {
+    // Convert to static array to avoid infinite loop when modifying live NodeList
+    const children = Array.from(element.childNodes);
+    for (const child of children) {
       if (child.nodeType === Node.ELEMENT_NODE) {
         if (blockTags.includes(child.tagName)) {
           // Add newline before block elements
@@ -95,5 +97,15 @@ function extractArticle() {
   }
 }
 
-// Execute and store result globally
-window.__pageDigestResult__ = extractArticle();
+// Listen for messages from the background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'extractContent') {
+    try {
+      const result = extractArticle();
+      sendResponse(result);
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+  return true; // Keep the message channel open for async response
+});
