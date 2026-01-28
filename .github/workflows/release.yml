@@ -25,6 +25,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          sed -i "s/\"version\": \"0.0.0\"/\"version\": \"$VERSION\"/" manifest.json
+
       - name: Write private key
         run: echo "${{ secrets.CRX_PRIVATE_KEY }}" > key.pem
 

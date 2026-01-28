@@ -1,6 +1,5 @@
 {
   "name": "page-digest",
-  "version": "1.0.0",
   "description": "Chrome extension to extract article content and send to ChatGPT Summarizer",
   "scripts": {
     "build": "esbuild src/content.js --bundle --outfile=dist/content.bundle.js --format=iife",

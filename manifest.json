@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Page Digest",
-  "version": "1.2.1",
+  "version": "0.0.0",
   "description": "Extract article content and send to ChatGPT, Gemini, or Claude for summarization",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
