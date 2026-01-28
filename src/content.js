@@ -1,5 +1,45 @@
 import { Readability } from '@mozilla/readability';
 
+function extractTextFromHtml(html) {
+  // Create a temporary element to extract text with proper spacing
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  // Walk through all elements and ensure block elements have spacing
+  const blockTags = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'TR', 'BR', 'BLOCKQUOTE', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'TD', 'TH'];
+
+  function addSpacing(element) {
+    for (const child of element.childNodes) {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        if (blockTags.includes(child.tagName)) {
+          // Add newline before block elements
+          child.insertAdjacentText('beforebegin', '\n');
+        }
+        addSpacing(child);
+      }
+    }
+  }
+
+  addSpacing(temp);
+
+  // Get text and clean up excessive whitespace
+  let text = temp.innerText || temp.textContent;
+
+  // Replace multiple newlines with double newline (paragraph break)
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // Replace multiple spaces with single space
+  text = text.replace(/[ \t]+/g, ' ');
+
+  // Trim lines
+  text = text.split('\n').map(line => line.trim()).join('\n');
+
+  // Remove empty lines at start/end
+  text = text.trim();
+
+  return text;
+}
+
 function extractArticle() {
   try {
     const documentClone = document.cloneNode(true);
@@ -7,8 +47,12 @@ function extractArticle() {
     const article = reader.parse();
 
     const fallbackContent = document.body.innerText;
-    const usedFallback = !article || !article.textContent;
-    const content = usedFallback ? fallbackContent : article.textContent;
+    const usedFallback = !article || !article.content;
+
+    // Use our custom extraction to get properly spaced text
+    const content = usedFallback
+      ? fallbackContent
+      : extractTextFromHtml(article.content);
 
     // Determine quality
     let quality = 'good';
