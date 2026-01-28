@@ -87,6 +87,20 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   } catch (error) {
     console.error('[PageDigest] Error:', error.message);
+
+    // Show user-friendly error notification
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: (errorMsg) => {
+          alert(`Page Digest Error:\n\n${errorMsg}\n\nThis may happen on pages with paywalls or dynamic content. Try refreshing the page and waiting for it to fully load.`);
+        },
+        args: [error.message]
+      });
+    } catch (e) {
+      // Couldn't show alert, just log it
+      console.error('[PageDigest] Could not show error to user:', e.message);
+    }
   }
 });
 
@@ -107,19 +121,63 @@ async function showConfirmDialog(tabId, reason) {
 }
 
 async function extractContent(tabId) {
-  // Execute the bundle which stores result in window.__pageDigestResult__
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['dist/content.bundle.js']
-  });
+  const maxRetries = 3;
+  let lastError = null;
 
-  // Retrieve the result
-  const results = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: () => window.__pageDigestResult__
-  });
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log('[PageDigest] Retry attempt', attempt + 1);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
 
-  return results[0]?.result;
+      // Check if tab still exists
+      const tab = await chrome.tabs.get(tabId).catch(() => null);
+      if (!tab) {
+        throw new Error('Tab no longer exists');
+      }
+
+      console.log('[PageDigest] Sending message to content script...');
+
+      // Try to send message to content script (which is already injected via manifest)
+      const result = await chrome.tabs.sendMessage(tabId, { action: 'extractContent' })
+        .catch(async (err) => {
+          // Content script might not be loaded yet, try injecting it
+          console.log('[PageDigest] Content script not ready, injecting...', err.message);
+
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['dist/content.bundle.js']
+          });
+
+          // Wait for script to initialize
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          // Try sending message again
+          return chrome.tabs.sendMessage(tabId, { action: 'extractContent' });
+        });
+
+      console.log('[PageDigest] Got response from content script');
+      return result;
+
+    } catch (error) {
+      lastError = error;
+      console.log('[PageDigest] Extraction attempt failed:', error.message);
+
+      // Retry on communication errors
+      if (error.message.includes('Receiving end does not exist') ||
+          error.message.includes('Frame') ||
+          error.message.includes('frame') ||
+          error.message.includes('Could not establish connection')) {
+        continue;
+      }
+
+      // For other errors, don't retry
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to extract content after retries');
 }
 
 async function handleSummarize(provider, article) {
