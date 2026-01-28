@@ -1,5 +1,7 @@
 # Page Digest
 
+[![Release](https://github.com/joanfabregat/page-digest/actions/workflows/release.yml/badge.svg)](https://github.com/joanfabregat/page-digest/actions/workflows/release.yml)
+
 A Chrome extension that extracts article content from web pages and sends it to your preferred AI assistant (ChatGPT, Gemini, or Claude) for summarization.
 
 ## Features
