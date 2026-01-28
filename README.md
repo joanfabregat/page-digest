@@ -1,7 +1,7 @@
 # Page Digest
 
 [![Release](https://github.com/joanfabregat/page-digest/actions/workflows/release.yml/badge.svg)](https://github.com/joanfabregat/page-digest/actions/workflows/release.yml)
-[![Version](https://img.shields.io/github/package-json/v/joanfabregat/page-digest)](https://github.com/joanfabregat/page-digest/releases)
+[![Version](https://img.shields.io/github/v/release/joanfabregat/page-digest)](https://github.com/joanfabregat/page-digest/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Chrome extension that extracts article content from web pages and sends it to your preferred AI assistant (ChatGPT, Gemini, or Claude) for summarization.
